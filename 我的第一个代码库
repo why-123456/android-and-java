@@ -1,0 +1,166 @@
+# android-and-java
+/**
+ * 
+ */
+package com.mad.trafficclient.fragment;
+
+import android.os.Bundle;
+//import android.support.v4.app.Fragment;
+//import android.support.v4.app.FragmentActivity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import com.mad.trafficclient.R;
+import com.mad.trafficclient.adapter.Frag1Adpater;
+import com.mad.trafficclient.bean.CarBean;
+import com.mad.trafficclient.bean.MyCarBean;
+import com.mad.trafficclient.bean.UserBean;
+import com.mad.trafficclient.net.BaseRequest;
+import com.mad.trafficclient.net.GetCarBalanceRequest;
+import com.mad.trafficclient.net.GetCarRequest;
+import com.mad.trafficclient.net.GetUserRequest;
+import com.mad.trafficclient.util.Util;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+
+public class Fragment_1 extends Fragment {
+
+	private ImageView iv;
+	private TextView tvUser;
+	private TextView tvName;
+	private TextView tvSex;
+	private TextView tvPhone;
+	private TextView tvPcard;
+	private TextView tvTime;
+	private ListView lv;
+	FragmentActivity context;
+	String pcard;
+	List<MyCarBean> carBeans;
+	Frag1Adpater adpater;
+
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+							 Bundle savedInstanceState) {
+		return inflater.inflate(R.layout.fragment_layout01, container,false);
+	}
+
+	@Override
+	public void onViewCreated(View view, Bundle savedInstanceState) {
+		super.onViewCreated(view, savedInstanceState);
+
+
+		context=getActivity();
+		iv = (ImageView) view.findViewById(R.id.iv);
+		tvUser = (TextView) view.findViewById(R.id.tv_user);
+		tvName = (TextView) view.findViewById(R.id.tv_name);
+		tvSex = (TextView) view.findViewById(R.id.tv_sex);
+		tvPhone = (TextView) view.findViewById(R.id.tv_phone);
+		tvPcard = (TextView) view.findViewById(R.id.tv_pcard);
+		tvTime = (TextView) view.findViewById(R.id.tv_time);
+		lv = (ListView) view.findViewById(R.id.lv);
+		carBeans=new ArrayList<>();
+
+
+		adpater=new Frag1Adpater(context,carBeans);
+		lv.setAdapter(adpater);
+		getUserData();
+		TextView title = context.findViewById(R.id.tv_title);
+		title.setText("个人中心");
+	}
+
+	public void getUserData(){
+		GetUserRequest getUserRequest=new GetUserRequest(context);
+		getUserRequest.handlerResult(new BaseRequest.OnRequestResult<List<UserBean>>() {
+			@Override
+			public void onSuccess(List<UserBean> o) {
+				for (int i=0;i<o.size();i++){
+					if (o.get(i).getUsername().equals(Util.LoadUser(context))){
+						tvUser.setText(o.get(i).getUsername()+"");
+						tvName.setText(o.get(i).getPname()+"");
+						tvSex.setText(o.get(i).getPsex()+"");
+						tvPhone.setText(o.get(i).getPtel().substring(0,3)+"****"
+						+o.get(i).getPtel().substring(7));
+						tvPcard.setText(o.get(i).getPcardid().substring(0,6)+"*********"+o.get(i).getPcardid().substring(15,18));
+						pcard=o.get(i).getPcardid();
+						tvTime.setText(o.get(i).getPregisterdate().substring(0,10)+"");
+					}
+				}
+				getCarData();
+			}
+
+			@Override
+			public void onError(String error) {
+
+			}
+
+			@Override
+			public void onNetError(String error) {
+
+			}
+		});
+	}
+
+	public void getCarData(){
+		GetCarRequest getCarRequest=new GetCarRequest(context);
+		getCarRequest.handlerResult(new BaseRequest.OnRequestResult<List<CarBean>>() {
+			@Override
+			public void onSuccess(List<CarBean> o) {
+				for (int i=0;i<o.size();i++){
+					if (o.get(i).getPcardid().equals(pcard)){
+						final MyCarBean myCarBean=new MyCarBean();
+						myCarBean.setCarnumber(o.get(i).getCarnumber());
+						myCarBean.setNumber(o.get(i).getNumber());
+						myCarBean.setCarbrand(o.get(i).getCarbrand());
+						GetCarBalanceRequest getCarBalanceRequest=new GetCarBalanceRequest(context,o.get(i).getNumber());
+						getCarBalanceRequest.handlerResult(new BaseRequest.OnRequestResult<Integer>() {
+							@Override
+							public void onSuccess(Integer integer) {
+								myCarBean.setMoney(integer);
+								carBeans.add(myCarBean);
+								Collections.sort(carBeans, new Comparator<MyCarBean>() {
+									@Override
+									public int compare(MyCarBean o1, MyCarBean o2) {
+										return o1.getNumber()-o2.getNumber();
+									}
+								});
+								adpater.notifyDataSetChanged();
+							}
+
+							@Override
+							public void onError(String error) {
+
+							}
+
+							@Override
+							public void onNetError(String error) {
+
+							}
+						});
+					}
+				}
+			}
+
+			@Override
+			public void onError(String error) {
+
+			}
+
+			@Override
+			public void onNetError(String error) {
+
+			}
+		});
+	}
+
+}
+
